@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Android.Content;
 using Android.OS;
 using Android.Runtime;
 using Android.Util;
-using Android.Views;
 using AndroidX.AppCompat.Widget;
 using AndroidX.CoordinatorLayout.Widget;
 using AndroidX.Navigation;
 using AndroidX.Navigation.Fragment;
 using Google.Android.Material.AppBar;
-using AView = Android.Views.View;
 
 namespace Microsoft.Maui
 {
@@ -139,23 +135,12 @@ namespace Microsoft.Maui
 
 		protected private virtual void OnFragmentResumed(AndroidX.Fragment.App.FragmentManager fm, NavHostPageFragment navHostPageFragment)
 		{
-			// TODO MAUI Finish wiring up NavigationFinished
-			//_ = NavigationView ?? throw new InvalidOperationException($"NavigationView cannot be null");
-
-			//var graph = (NavGraphDestination)NavHost.NavController.Graph;
-			//NavigationView.NavigationFinished(graph.NavigationStack);
 		}
 
 		public virtual void RequestNavigation(MauiNavigationRequestedEventArgs e)
 		{
 			var graph = (NavGraphDestination)NavHost.NavController.Graph;
-			graph.ReShuffleDestinations(e.NavigationStack, e.Animated, this);
-		}
-
-		public virtual void Pop(object? arg3)
-		{
-			//var graph = (NavGraphDestination)NavHost.NavController.Graph;
-			//graph.ReShuffleDestinations(e.NavigationStack, e.Animated, this);
+			graph.ApplyNavigationRequest(e.NavigationStack, e.Animated, this);
 		}
 
 		internal void OnPop()
@@ -165,15 +150,7 @@ namespace Microsoft.Maui
 			var graph = (NavGraphDestination)NavHost.NavController.Graph;
 			var stack = new List<IView>(graph.NavigationStack);
 			stack.RemoveAt(stack.Count - 1);
-			graph.ReShuffleDestinations(stack, true, this);
-
-
-			//NavigationView
-			//	.PopAsync()
-			//	.FireAndForget((e) =>
-			//	{
-			//		//Log.Warning(nameof(NavigationViewHandler), $"{e}");
-			//	});
+			graph.ApplyNavigationRequest(stack, true, this);
 		}
 
 		#region IOnDestinationChangedListener
@@ -185,6 +162,8 @@ namespace Microsoft.Maui
 				var titledElement = fnd.Page as ITitledElement;
 				Toolbar.Title = titledElement?.Title;
 			}
+
+			ToolbarReady();
 		}
 		#endregion
 

@@ -9,18 +9,15 @@ using Android.Runtime;
 using Android.Views;
 using Android.Views.Animations;
 using AndroidX.AppCompat.App;
-using AndroidX.AppCompat.Widget;
 using AndroidX.CoordinatorLayout.Widget;
 using AndroidX.Fragment.App;
 using AndroidX.Navigation.Fragment;
 using AndroidX.Navigation.UI;
-using Microsoft.Maui.Handlers;
 using AView = Android.Views.View;
-using FragmentTransit = Android.App.FragmentTransit;
 
 namespace Microsoft.Maui
 {
-	public class NavHostPageFragment : Fragment
+	public class NavHostPageFragment : Fragment, Animation.IAnimationListener
 	{
 		NavigationLayout? _navigationLayout;
 		NavigationLayout NavigationLayout => _navigationLayout ??= NavDestination.NavigationLayout;
@@ -57,41 +54,50 @@ namespace Microsoft.Maui
 		{
 			int id = 0;
 
-			// TODO MAUI write comments about WHY
-			if (Graph.IsPopping == null || !Graph.IsAnimated)
-				return base.OnCreateAnimation(transit, enter, nextAnim);
+			Animation? returnValue = base.OnCreateAnimation(transit, enter, nextAnim);
 
-			if (Graph.IsPopping.Value)
+			//// TODO MAUI write comments about WHY
+			if (Graph.IsPopping == null || !Graph.IsAnimated)
 			{
-				if (!enter)
-				{
-					id = Resource.Animation.exittoright;
-				}
-				else
-				{
-					id = Resource.Animation.enterfromleft;
-				}
+				returnValue = base.OnCreateAnimation(transit, enter, nextAnim);
 			}
 			else
 			{
-				if (enter)
+				if (Graph.IsPopping.Value)
 				{
-					id = Resource.Animation.enterfromright;
+					if (!enter)
+					{
+						id = Resource.Animation.nav_default_pop_exit_anim;
+					}
+					else
+					{
+						id = Resource.Animation.nav_default_pop_enter_anim;
+					}
 				}
 				else
 				{
-					id = Resource.Animation.exittoleft;
+					if (enter)
+					{
+						id = Resource.Animation.nav_default_enter_anim;
+					}
+					else
+					{
+						id = Resource.Animation.nav_default_exit_anim;
+					}
+				}
+
+				if (id > 0)
+				{
+					returnValue = AnimationUtils.LoadAnimation(Context, id);
+				}
+				else
+				{
+					returnValue = base.OnCreateAnimation(transit, enter, id);
 				}
 			}
 
-			if (id <= 0)
-				return base.OnCreateAnimation(transit, enter, id);
-
-			var customAnimation = AnimationUtils.LoadAnimation(Context, id);
-			var animation =
-				customAnimation ?? base.OnCreateAnimation(transit, enter, id);
-			
-			return animation;
+			returnValue?.SetAnimationListener(this);
+			return returnValue!;
 		}
 
 		public override AView OnCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
@@ -118,8 +124,6 @@ namespace Microsoft.Maui
 		{
 			base.OnViewCreated(view, savedInstanceState);
 
-			Console.WriteLine($"OnViewCreated {(NavDestination.Page as ITitledElement)?.Title}");
-
 			var controller = NavHostFragment.FindNavController(this);
 			var appbarConfig =
 				new AppBarConfiguration
@@ -129,73 +133,11 @@ namespace Microsoft.Maui
 			NavigationUI
 				.SetupWithNavController(NavDestination.NavigationLayout.Toolbar, controller, appbarConfig);
 
-			HasOptionsMenu = true;
-
 			NavDestination.NavigationLayout.Toolbar.SetNavigationOnClickListener(BackClick);
-
-			var titledElement = NavDestination.Page as ITitledElement;
-
-			//NavDestination.NavigationLayout.Toolbar.Title = titledElement?.Title;
-
-			if (Context.GetActivity() is AppCompatActivity aca)
-			{
-			    //_navigationLayout.AppBar.action	aca.SupportActionBar.Title = titledElement?.Title;
-
-				// TODO MAUI put this elsewhere once we figure out how attached property handlers work
-				bool showNavBar = true;
-				//if (NavDestination.Page is BindableObject bo)
-				//	showNavBar = NavigationView.GetHasNavigationBar(bo);
-
-				var appBar = NavDestination.NavigationLayout.AppBar;
-				if (!showNavBar)
-				{
-					if (appBar.LayoutParameters is CoordinatorLayout.LayoutParams cl)
-					{
-						cl.Height = 0;
-						appBar.LayoutParameters = cl;
-					}
-				}
-				else
-				{
-					if (appBar.LayoutParameters is CoordinatorLayout.LayoutParams cl)
-					{
-						cl.Height = ActionBarHeight();
-						appBar.LayoutParameters = cl;
-					}
-				}
-			}
-
-
-			int ActionBarHeight()
-			{
-				int attr = Resource.Attribute.actionBarSize;
-
-				int actionBarHeight = (int)Context.GetThemeAttributePixels(Resource.Attribute.actionBarSize);
-
-				//if (actionBarHeight <= 0)
-				//	return Device.Info.CurrentOrientation.IsPortrait() ? (int)Context.ToPixels(56) : (int)Context.ToPixels(48);
-
-				//if (Context.GetActivity().Window.Attributes.Flags.HasFlag(WindowManagerFlags.TranslucentStatus) || Context.GetActivity().Window.Attributes.Flags.HasFlag(WindowManagerFlags.TranslucentNavigation))
-				//{
-				//	if (_toolbar.PaddingTop == 0)
-				//		_toolbar.SetPadding(0, GetStatusBarHeight(), 0, 0);
-
-				//	return actionBarHeight + GetStatusBarHeight();
-				//}
-
-				return actionBarHeight;
-			}
-
 		}
-
-		public override void OnResume()
-		{
-			base.OnResume();
-		}
-
 
 		public override void OnDestroyView()
-		{			
+		{
 			_navigationLayout = null;
 			base.OnDestroyView();
 		}
@@ -211,6 +153,18 @@ namespace Microsoft.Maui
 		public void HandleOnBackPressed()
 		{
 			NavDestination.NavigationLayout.OnPop();
+		}
+
+		void Animation.IAnimationListener.OnAnimationEnd(Animation? animation)
+		{
+		}
+
+		void Animation.IAnimationListener.OnAnimationRepeat(Animation? animation)
+		{
+		}
+
+		void Animation.IAnimationListener.OnAnimationStart(Animation? animation)
+		{
 		}
 
 		class ProcessBackClick : AndroidX.Activity.OnBackPressedCallback, AView.IOnClickListener

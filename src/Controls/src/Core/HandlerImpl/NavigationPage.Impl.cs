@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls.Internals;
@@ -79,11 +80,6 @@ namespace Microsoft.Maui.Controls
 			return Frame.Size;
 		}
 
-		//void INavigationView.NavigationFinished()
-		//{
-		//	throw new NotImplementedException();
-		//}
-
 		void INavigationView.RequestNavigation(MauiNavigationRequestedEventArgs eventArgs)
 		{
 			Handler?.Invoke(nameof(INavigationView.RequestNavigation), eventArgs);
@@ -118,72 +114,40 @@ namespace Microsoft.Maui.Controls
 			}
 
 			CurrentPage = (Page)newStack[newStack.Count - 1];
-			// TODO MAUI Create sync version of this since there's no animation
-			//RemoveAsyncInner(CurrentPage, false, true, true)
-			//		.FireAndForget((e) =>
-			//	{
-			//		//Log.Warning(nameof(NavigationViewHandler), $"{e}");
-			//	});
-
-			// TODO MAUI calculate this out better
-			//PopAsync()
-			//	.FireAndForget((e) =>
-			//	{
-			//		//Log.Warning(nameof(NavigationViewHandler), $"{e}");
-			//	});
 		}
-
-		//void INavigationView.InsertPageBefore(IView page, IView before)
-		//{
-		//	throw new NotImplementedException();
-		//}
-
-		//Task<IView> INavigationView.PopAsync() =>
-		//	(this as INavigationView).PopAsync(true);
-
-		//async Task<IView> INavigationView.PopAsync(bool animated)
-		//{
-		//	var thing = await this.PopAsync(animated);
-		//	return thing;
-		//}
-
-		//Task<IView> INavigationView.PopModalAsync()
-		//{
-		//	throw new NotImplementedException();
-		//}
-
-		//Task<IView> INavigationView.PopModalAsync(bool animated)
-		//{
-		//	throw new NotImplementedException();
-		//}
-
-		//Task INavigationView.PushAsync(IView page) =>
-		//	(this as INavigationView).PushAsync(page, true);
-
-		//Task INavigationView.PushAsync(IView page, bool animated)
-		//{
-		//	return this.PushAsync((Page)page, animated);
-		//}
-
-		//Task INavigationView.PushModalAsync(IView page)
-		//{
-		//	throw new NotImplementedException();
-		//}
-
-		//Task INavigationView.PushModalAsync(IView page, bool animated)
-		//{
-		//	throw new NotImplementedException();
-		//}
-
-		//void INavigationView.RemovePage(IView page)
-		//{
-		//	throw new NotImplementedException();
-		//}
 
 		IView Content => this.CurrentPage;
 
 		IReadOnlyList<IView> INavigationView.NavigationStack =>
 			this.Navigation.NavigationStack;
+
+		static void CurrentPagePropertyChanged(BindableObject bindable, object oldValue, object newValue)
+		{
+			var np = (NavigationPage)bindable;
+
+			if (oldValue is INotifyPropertyChanged ncpOld)
+			{
+				ncpOld.PropertyChanged -= np.CurrentPagePropertyChanged;
+			}
+
+			if (newValue is INotifyPropertyChanged ncpNew)
+			{
+				ncpNew.PropertyChanged += np.CurrentPagePropertyChanged;
+			}
+		}
+
+		void CurrentPagePropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.IsOneOf(NavigationPage.HasNavigationBarProperty,
+				NavigationPage.HasBackButtonProperty,
+				NavigationPage.TitleIconImageSourceProperty,
+				NavigationPage.TitleViewProperty,
+				NavigationPage.IconColorProperty) ||
+				e.Is(Page.TitleProperty))
+			{
+				Handler?.UpdateValue(e.PropertyName);
+			}
+		}
 	}
 
 }

@@ -8,10 +8,12 @@ using Android.App;
 using Android.Content;
 using Android.Content.Res;
 using Android.Graphics;
+using Android.Graphics.Drawables;
 using Android.Runtime;
 using Android.Util;
 using Android.Views;
 using AndroidX.AppCompat.Graphics.Drawable;
+using AndroidX.CoordinatorLayout.Widget;
 using AndroidX.DrawerLayout.Widget;
 using Google.Android.Material.AppBar;
 using Microsoft.Maui.Controls.Internals;
@@ -38,21 +40,16 @@ namespace Microsoft.Maui.Controls.Platform
 		DrawerMultiplexedListener _drawerListener;
 		DrawerLayout _drawerLayout;
 		FlyoutPage _flyoutPage;
-		bool _toolbarVisible;
 		IViewHandler _titleViewHandler;
 		Container _titleView;
 		Android.Widget.ImageView _titleIconView;
 		ImageSource _imageSource;
-		//bool _isAttachedToWindow;
 		List<IMenuItem> _currentMenuItems = new List<IMenuItem>();
 		List<ToolbarItem> _currentToolbarItems = new List<ToolbarItem>();
 
-		// The following is based on https://android.googlesource.com/platform/frameworks/support.git/+/4a7e12af4ec095c3a53bb8481d8d92f63157c3b7/v4/java/android/support/v4/app/FragmentManager.java#677
-		// Must be overriden in a custom renderer to match durations in XML animation resource files
-		protected virtual int TransitionDuration { get; set; } = 220;
-
 		NavigationPage Element { get; set; }
 
+		Page CurrentPage => (Page)NavGraphDestination.CurrentPage;
 		public NavigationPageView(Context context) : base(context)
 		{
 			Id = AView.GenerateViewId();
@@ -74,20 +71,6 @@ namespace Microsoft.Maui.Controls.Platform
 
 		IPageController PageController => Element;
 
-		internal bool ToolbarVisible
-		{
-			get { return _toolbarVisible; }
-			set
-			{
-				if (_toolbarVisible == value)
-					return;
-
-				_toolbarVisible = value;
-
-				if (!IsLayoutRequested)
-					RequestLayout();
-			}
-		}
 
 		void IManageFragments.SetFragmentManager(FragmentManager childFragmentManager)
 		{
@@ -139,6 +122,7 @@ namespace Microsoft.Maui.Controls.Platform
 
 		public override void RequestNavigation(MauiNavigationRequestedEventArgs e)
 		{
+			Console.WriteLine($"RequestNavigation START: {DateTime.Now.TimeOfDay.TotalMilliseconds}");
 			NavAnimationInProgress = true;
 			base.RequestNavigation(e);
 			NavAnimationInProgress = false;
@@ -153,14 +137,15 @@ namespace Microsoft.Maui.Controls.Platform
 				if (!removed)
 				{
 					UpdateToolbar();
-					if (_drawerToggle != null && NavigationPageController.StackDepth == 2 && 
+					if (_drawerToggle != null && NavigationPageController.StackDepth == 2 &&
 						NavigationPage.GetHasBackButton(page))
 						AnimateArrowIn();
 				}
-				else if (_drawerToggle != null && NavigationPageController.StackDepth == 2 && 
+				else if (_drawerToggle != null && NavigationPageController.StackDepth == 2 &&
 					NavigationPage.GetHasBackButton(page))
 					AnimateArrowOut();
 			}
+			Console.WriteLine($"RequestNavigation FINISH: {DateTime.Now.TimeOfDay.TotalMilliseconds}");
 		}
 
 		private protected override void OnPageFragmentDestroyed(FragmentManager fm, NavHostPageFragment navHostPageFragment)
@@ -287,6 +272,35 @@ namespace Microsoft.Maui.Controls.Platform
 			ToolbarExtensions.UpdateMenuItemIcon(Element.FindMauiContext(), menuItem, toolBarItem, null);
 		}
 
+
+		void UpdateToolbarVisibility()
+		{
+			bool showNavBar = NavigationPage.GetHasNavigationBar(CurrentPage);
+			if (!showNavBar)
+			{
+				if (_appBar.LayoutParameters is CoordinatorLayout.LayoutParams cl)
+				{
+					cl.Height = 0;
+					_appBar.LayoutParameters = cl;
+				}
+			}
+			else
+			{
+				if (_appBar.LayoutParameters is CoordinatorLayout.LayoutParams cl)
+				{
+					cl.Height = ActionBarHeight();
+					_appBar.LayoutParameters = cl;
+				}
+			}
+
+			int ActionBarHeight()
+			{
+				int actionBarHeight = (int)Context.GetThemeAttributePixels(Resource.Attribute.actionBarSize);
+				return actionBarHeight;
+			}
+		}
+
+		Drawable _defaultNavigationIcon;
 		private protected override void UpdateToolbar()
 		{
 			ActionBarDrawerToggle toggle = _drawerToggle;
@@ -294,20 +308,23 @@ namespace Microsoft.Maui.Controls.Platform
 			if (_toolbar == null)
 				return;
 
-			bool isNavigated = NavigationPageController.StackDepth > 1;
-			Page currentPage = Element.CurrentPage;
+			bool isNavigated = NavGraphDestination.NavigationStack.Count > 1;
+			Page currentPage = CurrentPage;
+
+			_defaultNavigationIcon ??= _toolbar.NavigationIcon;
 
 			if (isNavigated)
 			{
 				if (NavigationPage.GetHasBackButton(currentPage))
 				{
+					_toolbar.NavigationIcon ??= _defaultNavigationIcon;
 					if (toggle != null)
 					{
 						toggle.DrawerIndicatorEnabled = false;
 						toggle.SyncState();
 					}
-					
-					var prevPage = Element.Peek(1);
+
+					var prevPage = (Page)NavGraphDestination.NavigationStack[NavGraphDestination.NavigationStack.Count - 2];
 					var backButtonTitle = NavigationPage.GetBackButtonTitle(prevPage);
 
 					ImageSource image = NavigationPage.GetTitleIconImageSource(currentPage);
@@ -325,6 +342,10 @@ namespace Microsoft.Maui.Controls.Platform
 				{
 					toggle.DrawerIndicatorEnabled = _flyoutPage.ShouldShowToolbarButton();
 					toggle.SyncState();
+				}
+				else
+				{
+					_toolbar.NavigationIcon = null;
 				}
 			}
 			else
@@ -354,7 +375,7 @@ namespace Microsoft.Maui.Controls.Platform
 			if (textColor != null)
 				_toolbar.SetTitleTextColor(textColor.ToNative().ToArgb());
 
-			Color navIconColor = NavigationPage.GetIconColor(Element.CurrentPage);
+			Color navIconColor = NavigationPage.GetIconColor(CurrentPage);
 			if (navIconColor != null && _toolbar.NavigationIcon != null)
 				DrawableExtensions.SetColorFilter(_toolbar.NavigationIcon, navIconColor, FilterMode.SrcAtop);
 
@@ -369,11 +390,12 @@ namespace Microsoft.Maui.Controls.Platform
 
 			UpdateTitleIcon();
 			UpdateTitleView();
+			UpdateToolbarVisibility();
 		}
 
 		void UpdateTitleIcon()
 		{
-			Page currentPage = Element.CurrentPage;
+			Page currentPage = CurrentPage;
 
 			if (currentPage == null)
 				return;
@@ -415,7 +437,7 @@ namespace Microsoft.Maui.Controls.Platform
 			if (bar == null)
 				return;
 
-			Page currentPage = Element.CurrentPage;
+			Page currentPage = CurrentPage;
 
 			if (currentPage == null)
 				return;

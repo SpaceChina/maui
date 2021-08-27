@@ -14,6 +14,8 @@
             <Button Text="Remove Page"  Clicked="RemovePage" />
             <Button Text="Pop To Root"  Clicked="PopToRoot" />
             <Button Text="Swap Root"  Clicked="SwapRoot" />
+            <Button Text="Toggle Navigation Bar"  Clicked="ToggleNavigationBar" />
+            <Button Text="Toggle Back Button"  Clicked="ToggleBackButton" />
         </StackLayout>
     </views:BasePage.Content>
 </views:BasePage>

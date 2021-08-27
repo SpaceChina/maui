@@ -17,18 +17,14 @@ namespace Microsoft.Maui.Controls.Handlers
 		public static PropertyMapper<NavigationPage, NavigationPageHandler> NavigationPageMapper =
 			new PropertyMapper<NavigationPage, NavigationPageHandler>(NavigationViewHandler.NavigationViewMapper)
 			{
-				[nameof(NavigationPage.HasNavigationBarProperty.PropertyName)] = MapHasNavigationBar,
-				[nameof(NavigationPage.HasBackButtonProperty.PropertyName)] = UpdateToolBar,
-				[nameof(NavigationPage.TitleIconImageSourceProperty.PropertyName)] = UpdateToolBar,
-				[nameof(NavigationPage.TitleViewProperty.PropertyName)] = UpdateToolBar,
-				[nameof(NavigationPage.IconColorProperty.PropertyName)] = UpdateToolBar,
-				[nameof(Page.TitleProperty.PropertyName)] = UpdateToolBar,
+				[NavigationPage.HasNavigationBarProperty.PropertyName] = UpdateToolBar,
+				[NavigationPage.HasBackButtonProperty.PropertyName] = UpdateToolBar,
+				[NavigationPage.TitleIconImageSourceProperty.PropertyName] = UpdateToolBar,
+				[NavigationPage.TitleViewProperty.PropertyName] = UpdateToolBar,
+				[NavigationPage.IconColorProperty.PropertyName] = UpdateToolBar,
+				[Page.TitleProperty.PropertyName] = UpdateToolBar,
+				[NavigationPage.CurrentPageProperty.PropertyName] = UpdateToolBar,
 			};
-
-		private static void MapHasNavigationBar(NavigationPageHandler arg1, NavigationPage arg2)
-		{
-			arg1.NativeView.ToolbarVisible = NavigationPage.GetHasNavigationBar(arg2.CurrentPage);
-		}
 
 		private static void UpdateToolBar(NavigationPageHandler arg1, NavigationPage arg2)
 		{

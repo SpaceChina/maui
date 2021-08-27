@@ -46,6 +46,17 @@ namespace Maui.Controls.Sample.Pages
 				Navigation.RemovePage(Navigation.NavigationStack[Navigation.NavigationStack.Count - 2]);
 		}
 
+		void ToggleNavigationBar(object sender, EventArgs e)
+		{
+			NavigationPage.SetHasNavigationBar(this, !NavigationPage.GetHasNavigationBar(this));
+		}
+
+		void ToggleBackButton(object sender, EventArgs e)
+		{
+			NavigationPage.SetHasBackButton(this, !NavigationPage.GetHasBackButton(this));
+		}
+
+
 		void SwapRoot(object sender, EventArgs e)
 		{
 			(Parent as INavigationView).RequestNavigation(
