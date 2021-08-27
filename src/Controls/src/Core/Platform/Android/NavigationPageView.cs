@@ -122,7 +122,6 @@ namespace Microsoft.Maui.Controls.Platform
 
 		public override void RequestNavigation(MauiNavigationRequestedEventArgs e)
 		{
-			Console.WriteLine($"RequestNavigation START: {DateTime.Now.TimeOfDay.TotalMilliseconds}");
 			NavAnimationInProgress = true;
 			base.RequestNavigation(e);
 			NavAnimationInProgress = false;
@@ -145,7 +144,6 @@ namespace Microsoft.Maui.Controls.Platform
 					NavigationPage.GetHasBackButton(page))
 					AnimateArrowOut();
 			}
-			Console.WriteLine($"RequestNavigation FINISH: {DateTime.Now.TimeOfDay.TotalMilliseconds}");
 		}
 
 		private protected override void OnPageFragmentDestroyed(FragmentManager fm, NavHostPageFragment navHostPageFragment)
@@ -288,7 +286,11 @@ namespace Microsoft.Maui.Controls.Platform
 			{
 				if (_appBar.LayoutParameters is CoordinatorLayout.LayoutParams cl)
 				{
-					cl.Height = ActionBarHeight();
+					if (Element.IsSet(BarHeightProperty))
+						cl.Height = Element.OnThisPlatform().GetBarHeight();
+					else
+						cl.Height = ActionBarHeight();
+
 					_appBar.LayoutParameters = cl;
 				}
 			}

@@ -5,8 +5,7 @@ using AndroidX.Navigation;
 using AView = Android.Views.View;
 namespace Microsoft.Maui
 {
-	// TODO MAUI MAKE PRIVATE or make it proxy and probably rename
-	public class NavGraphDestination : NavGraph
+	internal class NavGraphDestination : NavGraph
 	{
 		IView? _currentPage;
 		internal IView CurrentPage 
@@ -23,6 +22,13 @@ namespace Microsoft.Maui
 			Id = AView.GenerateViewId();
 		}
 
+
+		internal void NavigationFinished()
+		{
+			IsPopping = null;
+		}
+
+		internal bool IsNavigating => IsPopping != null;
 		internal bool? IsPopping { get; private set; }
 		internal bool IsAnimated { get; private set; } = true;
 
@@ -52,15 +58,6 @@ namespace Microsoft.Maui
 		{
 			var navController = navigationLayout.NavHost.NavController;
 
-			// The incoming fragment uses these variables to pick the correct animation for the current
-			// incoming navigation request
-			if (newPageStack[newPageStack.Count - 1] == NavigationStack[NavigationStack.Count - 1])
-				IsPopping = null;
-			else
-				IsPopping = newPageStack.Count < NavigationStack.Count;
-
-			IsAnimated = animated;
-
 			// If the new stack isn't changing the visible page or the app bar then we just ignore
 			// the changes because there's no point to applying these to the native back stack
 			// We only apply changes when the currently visible page changes and/or the appbar
@@ -72,6 +69,25 @@ namespace Microsoft.Maui
 				UpdateNavigationStack(newPageStack);
 				return;
 			}
+
+			// The incoming fragment uses these variables to pick the correct animation for the current
+			// incoming navigation request
+			if (newPageStack[newPageStack.Count - 1] == NavigationStack[NavigationStack.Count - 1])
+				IsPopping = null;
+			else
+			{
+				if (IsNavigating)
+				{
+					// This should really never fire for the developer. Our xplat code should be handling waiting for navigation to
+					// complete before requesting another navigation from Core
+					// Maybe some day we'll put a navigation queue into Core? For now we won't
+					throw new InvalidOperationException("Previous Navigation Request is still Processing");
+				}
+
+				IsPopping = newPageStack.Count < NavigationStack.Count;
+			}
+
+			IsAnimated = animated;
 
 			var iterator = navigationLayout.NavHost.NavController.BackStack.Iterator();
 			var fragmentNavDestinations = new List<FragmentNavDestination>();
@@ -86,6 +102,10 @@ namespace Microsoft.Maui
 			}
 
 			Pages.Clear();
+
+			// Current BackStack has less entries then incoming new page stack
+			// This will add Back Stack Entries until the back stack and the new stack 
+			// match up
 			if (fragmentNavDestinations.Count < newPageStack.Count)
 			{
 				for (int i = 0; i < newPageStack.Count; i++)
@@ -103,6 +123,10 @@ namespace Microsoft.Maui
 					}
 				}
 			}
+			// User just wants to replace the currently visible page but the number
+			// of items in the stack are still the same. 
+			// In theory we could just prompt the currently active fragment to swap out the new PageView
+			// But this way we get an animation
 			else if (newPageStack.Count == fragmentNavDestinations.Count)
 			{
 				int lastFragId = fragmentNavDestinations[newPageStack.Count - 1].Id;
@@ -116,29 +140,20 @@ namespace Microsoft.Maui
 				navController.PopBackStack();
 				navController.Navigate(lastFragId);
 			}
-			// user is popping to root
-			else if (newPageStack.Count == 1)
-			{
-				// TODO MAUI work with cleaning up fragments before actually firing navigation
-				Pages.Add(newPageStack[0], fragmentNavDestinations[0].Id);
-				fragmentNavDestinations[0].Page = newPageStack[0];
-				navController.PopBackStack(fragmentNavDestinations[0].Id, false);
-			}
+			// Our back stack has more entries on it then  
 			else
 			{
 				int popToId = fragmentNavDestinations[newPageStack.Count - 1].Id;
 				for (int i = 0; i < newPageStack.Count; i++)
 				{
 					Pages.Add(newPageStack[i], fragmentNavDestinations[i].Id);
-
-					if (fragmentNavDestinations[i].Page != newPageStack[i])
-						fragmentNavDestinations[i].Page = newPageStack[i];
+					fragmentNavDestinations[i].Page = newPageStack[i];
 				}
 
 				navController.PopBackStack(popToId, false);
 			}
 
-
+			// Remove all Navigation Destinations that no longer apply to our current navigation stack
 			foreach (var thing in fragmentNavDestinations)
 			{
 				if (!Pages.Values.ToList().Contains(thing.Id))

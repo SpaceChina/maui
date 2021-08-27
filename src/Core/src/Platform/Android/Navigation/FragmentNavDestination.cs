@@ -7,7 +7,7 @@ using Microsoft.Maui.Handlers;
 
 namespace Microsoft.Maui
 {
-	public class FragmentNavDestination : FragmentNavigator.Destination
+	internal class FragmentNavDestination : FragmentNavigator.Destination
 	{
 		public IView Page { get; internal set; }
 		public IMauiContext MauiContext => NavigationLayout.MauiContext ?? throw new InvalidOperationException($"MauiContext cannot be null here");

@@ -1,15 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Android.Content;
-using Android.Content.Res;
-using Android.Graphics;
 using Android.OS;
 using Android.Runtime;
 using Android.Views;
 using Android.Views.Animations;
-using AndroidX.AppCompat.App;
-using AndroidX.CoordinatorLayout.Widget;
 using AndroidX.Fragment.App;
 using AndroidX.Navigation.Fragment;
 using AndroidX.Navigation.UI;
@@ -17,7 +10,7 @@ using AView = Android.Views.View;
 
 namespace Microsoft.Maui
 {
-	public class NavHostPageFragment : Fragment, Animation.IAnimationListener
+	internal class NavHostPageFragment : Fragment, Animation.IAnimationListener
 	{
 		NavigationLayout? _navigationLayout;
 		NavigationLayout NavigationLayout => _navigationLayout ??= NavDestination.NavigationLayout;
@@ -56,7 +49,6 @@ namespace Microsoft.Maui
 
 			Animation? returnValue = base.OnCreateAnimation(transit, enter, nextAnim);
 
-			//// TODO MAUI write comments about WHY
 			if (Graph.IsPopping == null || !Graph.IsAnimated)
 			{
 				returnValue = base.OnCreateAnimation(transit, enter, nextAnim);
@@ -157,6 +149,7 @@ namespace Microsoft.Maui
 
 		void Animation.IAnimationListener.OnAnimationEnd(Animation? animation)
 		{
+			NavigationLayout.FragmentAnimationFinished(this);
 		}
 
 		void Animation.IAnimationListener.OnAnimationRepeat(Animation? animation)
@@ -165,6 +158,7 @@ namespace Microsoft.Maui
 
 		void Animation.IAnimationListener.OnAnimationStart(Animation? animation)
 		{
+			NavigationLayout.FragmentAnimationStarted(this);
 		}
 
 		class ProcessBackClick : AndroidX.Activity.OnBackPressedCallback, AView.IOnClickListener

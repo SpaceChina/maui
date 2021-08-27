@@ -24,6 +24,7 @@ namespace Microsoft.Maui.Controls.Handlers
 				[NavigationPage.IconColorProperty.PropertyName] = UpdateToolBar,
 				[Page.TitleProperty.PropertyName] = UpdateToolBar,
 				[NavigationPage.CurrentPageProperty.PropertyName] = UpdateToolBar,
+				[PlatformConfiguration.AndroidSpecific.AppCompat.NavigationPage.BarHeightProperty.PropertyName] = UpdateToolBar,
 			};
 
 		private static void UpdateToolBar(NavigationPageHandler arg1, NavigationPage arg2)

@@ -62,7 +62,6 @@ namespace Microsoft.Maui
 			set => _fragmentNavigator = value;
 		}
 
-
 		internal Toolbar Toolbar
 		{
 			get => _toolbar ?? throw new InvalidOperationException($"ToolBar cannot be null");
@@ -74,7 +73,6 @@ namespace Microsoft.Maui
 			get => _appBar ?? throw new InvalidOperationException($"AppBar cannot be null");
 			set => _appBar = value;
 		}
-
 
 		public virtual void SetVirtualView(IView navigationView)
 		{
@@ -115,12 +113,34 @@ namespace Microsoft.Maui
 			NavHost.ChildFragmentManager.RegisterFragmentLifecycleCallbacks(new FragmentLifecycleCallback(this), false);
 		}
 
+
+		internal void FragmentAnimationFinished(NavHostPageFragment navHostFragment)
+		{
+		}
+
+		internal void FragmentAnimationStarted(NavHostPageFragment navHostFragment)
+		{
+		}
+
+		// Fragments are always destroyed if they aren't visible
+		// The Handler/NativeView associated with the visible IView remain intact
+		// The performance hit of destorying/recreating fragments should be negligible
+		// Hopefully this behavior survives implementation
+		// This will need to be tested with Maps and WebViews to make sure they behave efficiently
+		// being removed and then added back to a different Fragment
+		// 
+		// I'm firing NavigationFinished from here instead of FragmentAnimationFinished because
+		// this event appears to fire slightly after `FragmentAnimationFinished` and it also fires
+		// if we aren't using animations
 		protected private virtual void OnPageFragmentDestroyed(AndroidX.Fragment.App.FragmentManager fm, NavHostPageFragment navHostPageFragment)
 		{
 			_ = NavigationView ?? throw new InvalidOperationException($"NavigationView cannot be null");
 
-			var graph = (NavGraphDestination)NavHost.NavController.Graph;
-			NavigationView.NavigationFinished(graph.NavigationStack);
+			if (NavGraphDestination.IsNavigating)
+			{
+				NavGraphDestination.NavigationFinished();
+				NavigationView.NavigationFinished(NavGraphDestination.NavigationStack);
+			}
 		}
 
 		internal void ToolbarReady()
@@ -167,8 +187,6 @@ namespace Microsoft.Maui
 		}
 		#endregion
 
-
-
 		class FragmentLifecycleCallback : AndroidX.Fragment.App.FragmentManager.FragmentLifecycleCallbacks
 		{
 			NavigationLayout _navigationLayout;
@@ -177,7 +195,6 @@ namespace Microsoft.Maui
 			{
 				_navigationLayout = navigationLayout;
 			}
-
 
 			public override void OnFragmentResumed(AndroidX.Fragment.App.FragmentManager fm, AndroidX.Fragment.App.Fragment f)
 			{
